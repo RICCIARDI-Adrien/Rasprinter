@@ -93,6 +93,9 @@ int main(void)
 	// Get access to button GPIO
 	if (MainOpenGPIO() != 0) return EXIT_FAILURE;
 	
+	// Configure printer for operation
+	system("lpoptions -d DYMO_LabelWriter_450 -o Resolution=300x600dpi -o DymoPrintQuality=Graphics -o DymoPrintDensity=Normal -o PageSize=w162h90");
+	
 	// Create a software renderer (to avoid creating a window on a X11-less system)
 	// Create the surface the label will be rendered to
 	Pointer_Surface = SDL_CreateRGBSurfaceWithFormat(0, MAIN_OUTPUT_IMAGE_WIDTH, 640, 32, SDL_PIXELFORMAT_ARGB8888);
@@ -190,7 +193,7 @@ int main(void)
 			SDL_FreeSurface(Pointer_Temporary_Surface);
 			
 			// Print the label
-			// TODO
+			system("lp " MAIN_OUTPUT_IMAGE_FILE_NAME);
 			
 			// Wait for the button to be released
 			do
