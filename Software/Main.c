@@ -39,6 +39,7 @@ static int Main_GPIO_File_Descriptor = -1;
 /** Automatically and gracefully release SDL resources. */
 static void MainExit(void)
 {
+	close(Main_GPIO_File_Descriptor);
 	close(Main_GPIO_Chip_File_Descriptor);
 	TTF_Quit();
 	SDL_Quit();
@@ -80,7 +81,7 @@ static int MainOpenGPIO(void)
 //-------------------------------------------------------------------------------------------------
 int main(void)
 {
-	SDL_Surface *Pointer_Surface, *Pointer_Temporary_Surface;
+	SDL_Surface *Pointer_Surface, *Pointer_Temporary_Surface, *Pointer_Picture_Surface;
 	SDL_Renderer *Pointer_Renderer;
 	TTF_Font *Pointer_Font;
 	SDL_Color Color_Black = { 0, 0, 0, 255 };
@@ -109,6 +110,14 @@ int main(void)
 	if (Pointer_Renderer == NULL)
 	{
 		printf("Error : failed to create renderer (%s).\n", SDL_GetError());
+		return EXIT_FAILURE;
+	}
+	
+	// Cache the picture
+	Pointer_Picture_Surface = SDL_LoadBMP("Picture.bmp");
+	if (Pointer_Picture_Surface == NULL)
+	{
+		printf("Error : failed to load picture bitmap image (%s).\n", SDL_GetError());
 		return EXIT_FAILURE;
 	}
 	
@@ -146,6 +155,11 @@ int main(void)
 			SDL_SetRenderDrawColor(Pointer_Renderer, 255, 255, 255, 255);
 			SDL_RenderClear(Pointer_Renderer);
 			
+			// Render the picture
+			Destination_Rectangle.x = 40;
+			Destination_Rectangle.y = 10;
+			SDL_BlitSurface(Pointer_Picture_Surface, NULL, Pointer_Surface, &Destination_Rectangle);
+			
 			// Retrieve current date and time
 			Current_Time = time(NULL);
 			Pointer_Date_And_Time = localtime(&Current_Time);
@@ -158,7 +172,7 @@ int main(void)
 				printf("Error : failed to render date string surface (%s).\n", TTF_GetError());
 				return EXIT_FAILURE;
 			}
-			Destination_Rectangle.x = ((MAIN_OUTPUT_IMAGE_WIDTH - Pointer_Temporary_Surface->w) / 2);
+			Destination_Rectangle.x = ((MAIN_OUTPUT_IMAGE_WIDTH - Pointer_Temporary_Surface->w) / 2) + 224;
 			Destination_Rectangle.y = 150;
 			SDL_BlitSurface(Pointer_Temporary_Surface, NULL, Pointer_Surface, &Destination_Rectangle);
 			SDL_FreeSurface(Pointer_Temporary_Surface);
@@ -171,7 +185,7 @@ int main(void)
 				printf("Error : failed to render time string surface (%s).\n", TTF_GetError());
 				return EXIT_FAILURE;
 			}
-			Destination_Rectangle.x = ((MAIN_OUTPUT_IMAGE_WIDTH - Pointer_Temporary_Surface->w) / 2);
+			Destination_Rectangle.x = ((MAIN_OUTPUT_IMAGE_WIDTH - Pointer_Temporary_Surface->w) / 2) + 224;
 			Destination_Rectangle.y = 350;
 			SDL_BlitSurface(Pointer_Temporary_Surface, NULL, Pointer_Surface, &Destination_Rectangle);
 			SDL_FreeSurface(Pointer_Temporary_Surface);
