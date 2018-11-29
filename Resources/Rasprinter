@@ -12,11 +12,11 @@
 case "${1}" in
 	start)
 		# Wait some times before starting the daemon to make sure the GPIO controller is ready (or this can trigger false prints)
-		(sleep 5 && cd /opt/Rasprinter && ./rasprinter) &
+		(sleep 5 && cd /opt/Rasprinter && ./Rasprinter) &
 		;;
 
 	stop)
-		killall rasprinter
+		killall Rasprinter
 		;;
 
 	*)

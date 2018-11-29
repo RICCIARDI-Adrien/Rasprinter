@@ -1,7 +1,7 @@
 CC = gcc
 CCFLAGS = -W -Wall
 
-BINARY = rasprinter
+BINARY = Rasprinter
 LIBRARIES = -lSDL2 -lSDL2_ttf
 
 all:
