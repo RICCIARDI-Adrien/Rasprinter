@@ -20,7 +20,7 @@
 // Private constants
 //-------------------------------------------------------------------------------------------------
 /** Rendered image width in pixels. */
-#define MAIN_OUTPUT_IMAGE_WIDTH 1140
+#define MAIN_OUTPUT_IMAGE_WIDTH 1200
 
 /** The output file to generate. */
 #define MAIN_OUTPUT_IMAGE_FILE_NAME "/tmp/Label.bmp"
