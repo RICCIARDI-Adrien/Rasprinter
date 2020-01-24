@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <linux/gpio.h>
+#include <pthread.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <stdio.h>
@@ -37,6 +38,9 @@ static int Main_Button_GPIO_File_Descriptor = -1;
 /** The led GPIO file descriptor. */
 static int Main_Led_GPIO_File_Descriptor = -1;
 
+/** Tell whether printer is detected. */
+static volatile int Main_Is_Printer_Detected = 0;
+
 //-------------------------------------------------------------------------------------------------
 // Private functions
 //-------------------------------------------------------------------------------------------------
@@ -48,6 +52,45 @@ static void MainExit(void)
 	close(Main_GPIO_Chip_File_Descriptor);
 	TTF_Quit();
 	SDL_Quit();
+}
+
+/** Check whether printer is connected to the system and powered. Use a thread as search takes time. */
+static void *MainThreadDetectPrinter(void __attribute__((unused)) *Pointer_Argument)
+{
+	FILE *Pointer_File_Search_Process;
+	char String_Search_Result[128];
+	
+	while (1)
+	{
+		// Check on USB bus for printer presence
+		Pointer_File_Search_Process = popen("lsusb | grep LabelWriter", "r");
+		if (Pointer_File_Search_Process == NULL) // Grep command returns an error code if the requested string could not be found
+		{
+			Main_Is_Printer_Detected = 0;
+			goto Continue_Wait_Tick;
+		}
+		
+		// Retrieve search result
+		String_Search_Result[0] = 0; // Clear previous string content
+		if (fgets(String_Search_Result, sizeof(String_Search_Result), Pointer_File_Search_Process) == NULL)
+		{
+			Main_Is_Printer_Detected = 0;
+			goto Continue_Close_Process_File;
+		}
+		 
+		if (strstr(String_Search_Result, "LabelWriter 450") == NULL) Main_Is_Printer_Detected = 0;
+		else Main_Is_Printer_Detected = 1;
+		
+	Continue_Close_Process_File:
+		pclose(Pointer_File_Search_Process);
+		
+	Continue_Wait_Tick:
+		// Do not consume 100% CPU
+		usleep(10000000);
+	}
+	
+	// Make compiler happy
+	return NULL;
 }
 
 /** Retrieve a file descriptor on the GPIO to read state.
@@ -107,8 +150,9 @@ int main(void)
 	char String[64];
 	SDL_Rect Destination_Rectangle;
 	struct gpiohandle_data GPIO_Data;
+	pthread_t Thread_ID;
 	
-	// Get access to button GPIO
+	// Get access to needed GPIOs
 	if (MainOpenGPIO() != 0) return EXIT_FAILURE;
 	
 	// Configure printer for operation
@@ -152,17 +196,33 @@ int main(void)
 		printf("Error : failed to load font (%s).\n", TTF_GetError());
 		return EXIT_FAILURE;
 	}
+	
+	// Create a thread that will constantly monitor printer presence
+	if (pthread_create(&Thread_ID, NULL, MainThreadDetectPrinter, NULL) != 0)
+	{
+		printf("Error : failed to create printer detection thread (%s).\n", strerror(errno));
+		return EXIT_FAILURE;
+	}
 
 	// Automatically free SDL resources on application exit
 	atexit(MainExit);
 	
 	while (1)
 	{
+		// Turn led on if printer is detected
+		if (Main_Is_Printer_Detected) GPIO_Data.values[0] = 1;
+		else GPIO_Data.values[0] = 0;
+		if (ioctl(Main_Led_GPIO_File_Descriptor, GPIOHANDLE_SET_LINE_VALUES_IOCTL, &GPIO_Data) < 0)
+		{
+			printf("Error : could not set led state (%s).\n", strerror(errno));
+			return EXIT_FAILURE;
+		}
+		
 		// Read button state
 		if (ioctl(Main_Button_GPIO_File_Descriptor, GPIOHANDLE_GET_LINE_VALUES_IOCTL, &GPIO_Data) < 0)
 		{
 			printf("Error : could not read GPIO state (%s).\n", strerror(errno));
-			return -1;
+			return EXIT_FAILURE;
 		}
 		
 		// Button is active low
