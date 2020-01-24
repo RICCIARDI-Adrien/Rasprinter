@@ -30,8 +30,10 @@
 //-------------------------------------------------------------------------------------------------
 /** The file descriptor used to access GPIO character device. */
 static int Main_GPIO_Chip_File_Descriptor = -1;
-/** The specific GPIO file descriptor. */
-static int Main_GPIO_File_Descriptor = -1;
+/** The button GPIO file descriptor. */
+static int Main_Button_GPIO_File_Descriptor = -1;
+/** The led GPIO file descriptor. */
+static int Main_Led_GPIO_File_Descriptor = -1;
 
 //-------------------------------------------------------------------------------------------------
 // Private functions
@@ -39,7 +41,8 @@ static int Main_GPIO_File_Descriptor = -1;
 /** Automatically and gracefully release SDL resources. */
 static void MainExit(void)
 {
-	close(Main_GPIO_File_Descriptor);
+	close(Main_Led_GPIO_File_Descriptor);
+	close(Main_Button_GPIO_File_Descriptor);
 	close(Main_GPIO_Chip_File_Descriptor);
 	TTF_Quit();
 	SDL_Quit();
@@ -61,17 +64,29 @@ static int MainOpenGPIO(void)
 		return -1;
 	}
 	
-	// Get a file descriptor on the required GPIO configured in input mode
+	// Get a file descriptor on the button GPIO configured in input mode
 	memset(&GPIO_Request, 0, sizeof(GPIO_Request));
-	GPIO_Request.lineoffsets[0] = 2; // GPIO 2
+	GPIO_Request.lineoffsets[0] = 22; // GPIO 22
 	GPIO_Request.flags = GPIOHANDLE_REQUEST_INPUT;
 	GPIO_Request.lines = 1;
 	if (ioctl(Main_GPIO_Chip_File_Descriptor, GPIO_GET_LINEHANDLE_IOCTL, &GPIO_Request) < 0)
 	{
-		printf("Error : could not read GPIO pin state (%s).\n", strerror(errno));
+		printf("Error : could not retrieve button GPIO handle (%s).\n", strerror(errno));
 		return -1;
 	}
-	Main_GPIO_File_Descriptor = GPIO_Request.fd;
+	Main_Button_GPIO_File_Descriptor = GPIO_Request.fd;
+	
+	// Get a file descriptor on the led GPIO configured in output mode
+	memset(&GPIO_Request, 0, sizeof(GPIO_Request));
+	GPIO_Request.lineoffsets[0] = 27; // GPIO 27
+	GPIO_Request.flags = GPIOHANDLE_REQUEST_OUTPUT;
+	GPIO_Request.lines = 1;
+	if (ioctl(Main_GPIO_Chip_File_Descriptor, GPIO_GET_LINEHANDLE_IOCTL, &GPIO_Request) < 0)
+	{
+		printf("Error : could not retrieve led GPIO handle (%s).\n", strerror(errno));
+		return -1;
+	}
+	Main_Led_GPIO_File_Descriptor = GPIO_Request.fd;
 	
 	return 0;
 }
@@ -142,7 +157,7 @@ int main(void)
 	while (1)
 	{
 		// Read button state
-		if (ioctl(Main_GPIO_File_Descriptor, GPIOHANDLE_GET_LINE_VALUES_IOCTL, &GPIO_Data) < 0)
+		if (ioctl(Main_Button_GPIO_File_Descriptor, GPIOHANDLE_GET_LINE_VALUES_IOCTL, &GPIO_Data) < 0)
 		{
 			printf("Error : could not read GPIO state (%s).\n", strerror(errno));
 			return -1;
@@ -213,10 +228,10 @@ int main(void)
 			do
 			{
 				usleep(50000);
-				if (ioctl(Main_GPIO_File_Descriptor, GPIOHANDLE_GET_LINE_VALUES_IOCTL, &GPIO_Data) < 0)
+				if (ioctl(Main_Button_GPIO_File_Descriptor, GPIOHANDLE_GET_LINE_VALUES_IOCTL, &GPIO_Data) < 0)
 				{
 					printf("Error : could not read button release state (%s).\n", strerror(errno));
-					return -1;
+					return EXIT_FAILURE;
 				}
 			} while (GPIO_Data.values[0] == 0);
 			
