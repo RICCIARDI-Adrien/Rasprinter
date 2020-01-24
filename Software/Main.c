@@ -225,8 +225,8 @@ int main(void)
 			return EXIT_FAILURE;
 		}
 		
-		// Button is active low
-		if (GPIO_Data.values[0] == 0)
+		// Allow print only when button is pressed and printer is present
+		if (Main_Is_Printer_Detected && (GPIO_Data.values[0] == 0)) // Button is active low
 		{
 			// Clear rendering area with a white background
 			SDL_SetRenderDrawColor(Pointer_Renderer, 255, 255, 255, 255);
