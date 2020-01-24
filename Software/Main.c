@@ -21,6 +21,8 @@
 //-------------------------------------------------------------------------------------------------
 /** Rendered image width in pixels. */
 #define MAIN_OUTPUT_IMAGE_WIDTH 1200
+/** How many pixels to add as offset from the image left corner when rendering text. */
+#define MAIN_IMAGE_TEXT_LEFT_OFFSET 190
 
 /** The output file to generate. */
 #define MAIN_OUTPUT_IMAGE_FILE_NAME "/tmp/Label.bmp"
@@ -187,7 +189,7 @@ int main(void)
 				printf("Error : failed to render date string surface (%s).\n", TTF_GetError());
 				return EXIT_FAILURE;
 			}
-			Destination_Rectangle.x = ((MAIN_OUTPUT_IMAGE_WIDTH - Pointer_Temporary_Surface->w) / 2) + 224;
+			Destination_Rectangle.x = ((MAIN_OUTPUT_IMAGE_WIDTH - Pointer_Temporary_Surface->w) / 2) + MAIN_IMAGE_TEXT_LEFT_OFFSET;
 			Destination_Rectangle.y = 150;
 			SDL_BlitSurface(Pointer_Temporary_Surface, NULL, Pointer_Surface, &Destination_Rectangle);
 			SDL_FreeSurface(Pointer_Temporary_Surface);
@@ -200,7 +202,7 @@ int main(void)
 				printf("Error : failed to render time string surface (%s).\n", TTF_GetError());
 				return EXIT_FAILURE;
 			}
-			Destination_Rectangle.x = ((MAIN_OUTPUT_IMAGE_WIDTH - Pointer_Temporary_Surface->w) / 2) + 224;
+			Destination_Rectangle.x = ((MAIN_OUTPUT_IMAGE_WIDTH - Pointer_Temporary_Surface->w) / 2) + MAIN_IMAGE_TEXT_LEFT_OFFSET;
 			Destination_Rectangle.y = 350;
 			SDL_BlitSurface(Pointer_Temporary_Surface, NULL, Pointer_Surface, &Destination_Rectangle);
 			SDL_FreeSurface(Pointer_Temporary_Surface);
